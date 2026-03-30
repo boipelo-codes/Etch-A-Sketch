@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etch-A-Sketch | Grid Drawing Pad</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            color: #e31837;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .clear-btn {
+            background: #e74c3c;
+        }
+
+        .clear-btn:hover {
+            background: #c0392b;
+        }
+
+        .rainbow-btn {
+            background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
+        }
+
+        .darken-btn {
+            background: #34495e;
+        }
+
+        .mode-indicator {
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .mode-text {
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+
+        .mode-text.normal {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .mode-text.rainbow {
+            background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
+            color: white;
+        }
+
+        .mode-text.darken {
+            background: #34495e;
+            color: white;
+        }
+
+        .grid-container {
+            display: flex;
+            flex-wrap: wrap;
+            width: 960px;
+            height: 960px;
+            border: 2px solid #333;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            background: white;
+            margin: 0 auto;
+        }
+
+        .grid-square {
+            background-color: white;
+            box-sizing: border-box;
+            transition: background-color 0.05s ease;
+        }
+
+        .grid-square:hover {
+            /* Hover effect handled by JavaScript */
+        }
+
+        footer {
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid-container {
+                width: 80vw;
+                height: 80vw;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            button {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Etch-A-Sketch</h1>
+        
+        <div class="controls">
+            <button id="newGridBtn">✨ New Grid</button>
+            <button id="clearBtn" class="clear-btn">🗑️ Clear Canvas</button>
+            <button id="rainbowBtn" class="rainbow-btn">🌈 Rainbow Mode</button>
+            <button id="darkenBtn" class="darken-btn">⚫ Darken Mode</button>
+            <button id="normalBtn">⬜ Normal Mode</button>
+        </div>
+        
+        <div class="mode-indicator">
+            Current Mode: <span id="modeDisplay" class="mode-text normal">Normal (Black)</span>
+        </div>
+        
+        <div id="grid" class="grid-container"></div>
+        
+        <footer>
+            <p>🎯 Hover over squares to draw | Click "New Grid" to resize (max 100)</p>
+        </footer>
+    </div>
+
+    <script>
+        // Etch-A-Sketch Class
+        class EtchASketch {
+            constructor() {
+                this.gridContainer = document.getElementById('grid');
+                this.gridSize = 16; // Default 16x16 grid
+                this.drawingMode = 'normal'; // normal, rainbow, darken
+                this.squares = [];
+                
+                this.init();
+                this.setupEventListeners();
+            }
+            
+            init() {
+                this.createGrid(this.gridSize);
+            }
+            
+            createGrid(size) {
+                // Clear existing grid
+                this.gridContainer.innerHTML = '';
+                this.squares = [];
+                
+                // Calculate square size based on container dimensions
+                const containerWidth = this.gridContainer.clientWidth;
+                const squareSize = containerWidth / size;
+                
+                // Create grid squares
+                for (let i = 0; i < size * size; i++) {
+                    const square = document.createElement('div');
+                    square.classList.add('grid-square');
+                    square.style.width = `${squareSize}px`;
+                    square.style.height = `${squareSize}px`;
+                    square.style.backgroundColor = 'white';
+                    
+                    // Store initial darkness level for darken mode (0 = white, 1 = black)
+                    square.dataset.darkness = '0';
+                    
+                    // Add hover effect
+                    square.addEventListener('mouseenter', () => {
+                        this.drawOnSquare(square);
+                    });
+                    
+                    this.gridContainer.appendChild(square);
+                    this.squares.push(square);
+                }
+            }
+            
+            drawOnSquare(square) {
+                switch(this.drawingMode) {
+                    case 'normal':
+                        square.style.backgroundColor = 'black';
+                        break;
+                        
+                    case 'rainbow':
+                        // Generate random RGB color
+                        const r = Math.floor(Math.random() * 256);
+                        const g = Math.floor(Math.random() * 256);
+                        const b = Math.floor(Math.random() * 256);
+                        square.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+                        break;
+                        
+                    case 'darken':
+                        // Progressive darkening: each hover darkens by 10%
+                        let currentDarkness = parseFloat(square.dataset.darkness);
+                        if (currentDarkness < 1) {
+                            const newDarkness = Math.min(currentDarkness + 0.1, 1);
+                            square.dataset.darkness = newDarkness;
+                            
+                            // Calculate grayscale color
+                            const intensity = Math.floor(255 * (1 - newDarkness));
+                            square.style.backgroundColor = `rgb(${intensity}, ${intensity}, ${intensity})`;
+                        }
+                        break;
+                }
+            }
+            
+            clearCanvas() {
+                this.squares.forEach(square => {
+                    square.style.backgroundColor = 'white';
+                    if (this.drawingMode === 'darken') {
+                        square.dataset.darkness = '0';
+                    }
+                });
+            }
+            
+            resizeGrid() {
+                let newSize = prompt('Enter the number of squares per side (max 100):', this.gridSize);
+                
+                // Validate input
+                if (newSize === null) return; // User cancelled
+                
+                newSize = parseInt(newSize);
+                
+                if (isNaN(newSize)) {
+                    alert('Please enter a valid number!');
+                    return;
+                }
+                
+                if (newSize < 1) {
+                    alert('Grid size must be at least 1!');
+                    return;
+                }
+                
+                if (newSize > 100) {
+                    alert('Maximum grid size is 100! Setting to 100.');
+                    newSize = 100;
+                }
+                
+                this.gridSize = newSize;
+                this.createGrid(this.gridSize);
+            }
+            
+            setMode(mode) {
+                this.drawingMode = mode;
+                this.updateModeDisplay();
+                
+                // Reset darkness values when switching to darken mode
+                if (mode === 'darken') {
+                    this.squares.forEach(square => {
+                        if (square.style.backgroundColor !== 'white') {
+                            // Only reset if we're switching to darken mode
+                            square.dataset.darkness = '0';
+                        }
+                    });
+                }
+            }
+            
+            updateModeDisplay() {
+                const modeDisplay = document.getElementById('modeDisplay');
+                switch(this.drawingMode) {
+                    case 'normal':
+                        modeDisplay.textContent = 'Normal (Black)';
+                        modeDisplay.className = 'mode-text normal';
+                        break;
+                    case 'rainbow':
+                        modeDisplay.textContent = '🌈 Rainbow Mode';
+                        modeDisplay.className = 'mode-text rainbow';
+                        break;
+                    case 'darken':
+                        modeDisplay.textContent = '⚫ Darken Mode (10% per hover)';
+                        modeDisplay.className = 'mode-text darken';
+                        break;
+                }
+            }
+            
+            setupEventListeners() {
+                // New Grid button
+                const newGridBtn = document.getElementById('newGridBtn');
+                newGridBtn.addEventListener('click', () => this.resizeGrid());
+                
+                // Clear button
+                const clearBtn = document.getElementById('clearBtn');
+                clearBtn.addEventListener('click', () => this.clearCanvas());
+                
+                // Mode buttons
+                const rainbowBtn = document.getElementById('rainbowBtn');
+                rainbowBtn.addEventListener('click', () => this.setMode('rainbow'));
+                
+                const darkenBtn = document.getElementById('darkenBtn');
+                darkenBtn.addEventListener('click', () => this.setMode('darken'));
+                
+                const normalBtn = document.getElementById('normalBtn');
+                normalBtn.addEventListener('click', () => this.setMode('normal'));
+            }
+        }
+        
+        // Initialize the Etch-A-Sketch when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const etch = new EtchASketch();
+        });
+    </script>
+</body>
+</html>
